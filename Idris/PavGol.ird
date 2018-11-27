@@ -1,0 +1,49 @@
+module Tina
+
+plus': Nat -> Nat -> Nat
+plus' Z y = y
+plus' (S x) y = S $ plus x y
+
+-- data (=): a -> b -> Type where
+  -- Relf : {x : Type} -> (=) x x
+
+-- data List elem = Nil
+--                | Cons elem (List elem)
+--
+-- data List : elem -> Type where
+--   Nil : {elem : Type} -> List elem
+--   Cons : {elem : Type} -> elem -> List elem -> List elem
+
+plus : Nat -> Nat -> Nat
+plus Z a = a
+plus (S k) a = S (plus k a)
+
+data Nat = Z | S Nat
+
+-- data (=): a -> b -> Type wherer
+-- Refl : x = x
+
+sym_eq : x = y -> y = x
+sym_eq Refl = Refl
+
+tr_eq : x = y -> y = z -> x = z
+tr_eq Refl Refl = Refl
+
+
+congr : (P : a -> b) -> x = y -> P x = P y
+congr f Refl = Refl
+
+---- 2
+-- x = x + 0
+sym_plus_z : {m : Nat} -> m = m + 0
+sym_plus_z {m=Z} = Refl
+sym_plus_z {m=(S k)} = congr S (sym_plus_z{m=k})
+
+-- S x = 1 + x
+sym_plus_one : {m : Nat} -> S m = 1 + m
+sym_plus_one = Refl
+
+-- S x = x + 1
+sym_one_plus : {m : Nat} -> S m = m + 1
+sym_one_plus {m=Z} = Refl
+sym_one_plus {m=(S k)} = congr S $ sym_one_plus{m=k}
