@@ -1,3 +1,3 @@
-type op = Conj | Disj | Impl;;
+type var = Var of string;;
 
-type tree = Binop of op * tree * tree | Var of string;;
+type tree = Abstr var * tree | Appl tree * tree | Var of string;;
