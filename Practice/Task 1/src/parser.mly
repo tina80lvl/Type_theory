@@ -10,12 +10,14 @@
 %type <Tree.tree> main
 %%
 main:
-    appl LMBD VAR DOT main EOF  { Appl ($1, Abstr(Var($3), $5)) }
-    | LMBD VAR DOT main EOF     { Abstr ($2, $4) }
-    | appl EOF                  { $1 }
+    expr EOF { $1 }
+expr:
+    appl LMBD VAR DOT expr { Appl ($1, Abstr($3, $5)) }
+    | LMBD VAR DOT expr    { Abstr ($2, $4) }
+    | appl                 { $1 }
 appl:
     appl atom  { Appl ($1, $2) }
-    | atom     { $2 }
+    | atom     { $1 }
 atom:
-    OPEN main CLOSE  { $2 }
+    OPEN expr CLOSE  { $2 }
     | VAR            { Var ($1) }

@@ -1,3 +1,3 @@
-type var = Var of string;;
+(*type var = Var of string;;*)
 
-type tree = Abstr var * tree | Appl tree * tree | Var of string;;
+type tree = Abstr of string * tree | Appl of tree * tree | Var of string;;
