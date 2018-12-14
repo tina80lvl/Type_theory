@@ -13,11 +13,14 @@ let string_of_tree tree =
   in s_t tree;
   contents buf;;
 
-(*let (ic,oc) = (open_in "input.txt", open_out "output.txt");;*)
+let lines =
+let init = create 100000 in
+  let rec f () =
+  try
+    let s = input_line stdin in
+      (add_string init s; add_string init " "; f (); ())
+  with e -> () in
+    (f (); contents init);;
 
-input_line stdin >> Lexing.from_string >> Parser.main Lexer.main >> string_of_tree >> printf "%s\n";;
 
-(*
-close_out oc;;
-close_in ic;;
-*)
+lines >>  Lexing.from_string >> Parser.main Lexer.main >> string_of_tree >> printf "%s\n";;
