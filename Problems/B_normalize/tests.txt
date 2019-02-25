@@ -1,0 +1,3 @@
+(\x y z. (x z) (y z)) (\x.x) (\x.x)
+((\x y z. (x z) (y z)) (\x.x) (\x.x))
+\f.((\x.f (x x)) (\x.f (x x))) p

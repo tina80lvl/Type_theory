@@ -1,5 +1,6 @@
 (* infix for ocaml :( :) *)
 
+
 type Lambda =
   | FreeVar of String
   | LocVar of Int
