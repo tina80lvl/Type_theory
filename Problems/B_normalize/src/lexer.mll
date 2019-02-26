@@ -13,5 +13,3 @@ rule main = parse
         | "("           { OPEN }
         | ")"           { CLOSE }
         | eof           { EOF }
-
-(* type Token? *)

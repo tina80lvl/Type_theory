@@ -1,3 +1,11 @@
+(\x.x) z
+(\x.y) z
+(\a.\a.b) c
+(\a.\x.a) (x y)
 (\x y z. (x z) (y z)) (\x.x) (\x.x)
 ((\x y z. (x z) (y z)) (\x.x) (\x.x))
-\f.((\x.f (x x)) (\x.f (x x))) p
+(\f.((\x.f (x x)) (\x.f (x x)))) p
+(\x.\y.x y) (\a.a)
+(\x.\y.x y) \x.x
+(\x.\y.\z.x y z) (\x.\y.x y)
+(\x.\y.\z.(x y z)) (\a.\b.(a b))
