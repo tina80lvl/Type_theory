@@ -9,3 +9,4 @@
 (\x.\y.x y) \x.x
 (\x.\y.\z.x y z) (\x.\y.x y)
 (\x.\y.\z.(x y z)) (\a.\b.(a b))
+(\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u)) (\f.\x.f (f (f x)))

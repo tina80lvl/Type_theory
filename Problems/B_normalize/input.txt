@@ -1,1 +1,1 @@
-(\x.\y.\z.(x y z)) \a.\b.(a b)
+(\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u)) (\f.\x.f (f (f x)))
