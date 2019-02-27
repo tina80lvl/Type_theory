@@ -110,7 +110,7 @@ let rec reduction expr = match expr with
   | Abstr (ov, oe) -> VarSet.add ov var_set; Abstr(ov, reduction oe)
   ;;
 
-(*  *)
+(* val get_original_var : string -> string *)
 let rec get_original_var var =
   let loc_var = Hashtbl.find global_vars var
   in
@@ -119,7 +119,7 @@ let rec get_original_var var =
     else var
   ;;
 
-(*  *)
+(* val change_vars_back : Tree.tree -> Tree.tree *)
 let rec change_vars_back expr = match expr with
   | Var v -> Var(get_original_var v)
   | Appl (l,r) -> Appl((change_vars_back l), (change_vars_back r))
@@ -150,11 +150,12 @@ let init = Buffer.create 100000 in
     let s = input_line stdin in
       (add_string init s; add_string init " "; f (); ())
   with e -> () in
-    (f (); contents init);;
+    (f (); contents init)
+  ;;
 
 (* file input *)
-let (ic,oc) = (open_in "input.txt", open_out "output.txt");;
-ic >> input_line >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce >> change_vars_back >> string_of_tree >> printf "%s\n";;
+(* let (ic,oc) = (open_in "input.txt", open_out "output.txt");;
+ic >> input_line >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce >> change_vars_back >> string_of_tree >> printf "%s\n";; *)
 
 (* terminal input *)
-(* lines >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce >> string_of_tree >> printf "%s\n";; *)
+lines >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce >> string_of_tree >> printf "%s\n";;
