@@ -61,18 +61,24 @@ y
 (\a.\b.a) (x y)
 (\b.(x y))
 
-IN: ((\x . x (\x . x)) y)
-OUT: (( y ) ( \x . (x) ))
-MY: (x1 (\x1.x1))
+OK
+((\x . x (\x . x)) y)
+(y (\x0.x0))
+
 
 OK
 (\x . x)
+(\x.x)
 
-OK
+🧨
 ((\x.\y.\z.x z (y z)) (\x.\y.x) (\x.x))
+(\x15.x15)
+(\z . (z))
 
-OK
+🧨
 (\x.((\y.y) z))
+(\x0.z)
+(\x.z)
 
 OK
 ((\x.\y.y x) ((\x.x x) (\x.x x))) (\x.a)

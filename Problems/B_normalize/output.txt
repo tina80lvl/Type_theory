@@ -1,18 +1,35 @@
-⚡️⚡️⚡️ expr: ((\x.x) z)
+⚡️⚡️⚡️ expr: (\z.((\x.(\z.x)) z))
 🧨 changed:
 🥺 map:
+⌛️ abstr
+⚡️⚡️⚡️ expr: ((\x.(\z.x)) z)
+🧨 changed:
+🥺 map:
+k v = z x0
 ⌛️ appl
 ⚡️⚡️⚡️ expr: z
 🧨 changed:
 🥺 map:
+k v = z x0
 ⌛️ var: z
-⚡️⚡️⚡️ expr: (\x.x)
+⚡️⚡️⚡️ expr: (\x.(\z.x))
 🧨 changed:
 🥺 map:
+k v = z x0
+⌛️ abstr
+⚡️⚡️⚡️ expr: (\z.x)
+🧨 changed:
+🥺 map:
+k v = z x0
+k v = x x1
 ⌛️ abstr
 ⚡️⚡️⚡️ expr: x
 🧨 changed:
+k v = z 2
 🥺 map:
-k v = x x0
+k v = z x2
+k v = z x0
+k v = x x1
 ⌛️ var: x
-🌍🌍🌍 reduction of: ((\x0.x0) z)
+🌍🌍🌍 reduction of: (\x0.((\x1.(\x2.x1)) x0))
+🌍🌍🌍 reduction of: ((\x1.(\x2.x1)) x0)
