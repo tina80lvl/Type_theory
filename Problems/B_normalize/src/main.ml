@@ -3,6 +3,7 @@ open Buffer;;
 open Printf;;
 open Hashtbl;;
 
+let (ic,oc) = (open_in "input.txt", open_out "output.txt");;
 let (>>) x f = f x;;
 
 module VarSet = Set.Make(String);;
@@ -40,24 +41,49 @@ let free_to_sub theta expr x =
       in is_free expr x VarSet.empty
       ;;
 
-let print_hmap = Hashtbl.iter (fun x y -> printf "k v = %s %s\n" x y);;
+let print_hmap hm = Hashtbl.iter (fun x y -> fprintf oc "k v = %s %s\n" x y) hm;;
 (* val add_el_to_hmap : (string, string) Hashtbl.t -> string -> string -> (string, string) Hashtbl.t *)
 let add_el_to_hmap map k v = (*printf "%s %s\n" k, v;*) Hashtbl.add map k v; Hashtbl.add global_vars v k; map;;
+let rem_el_from_hmap map k = (*printf "%s %s\n" k, v;*) Hashtbl.remove map k; map;;
+
 (* val merge_maps : (string, string) Hashtbl.t -> unit *)
 let merge_maps map = Hashtbl.iter (fun x y -> Hashtbl.add map x y) global_vars;;
 (* val unique_name : string Stream.t *)
-let unique_name = Stream.from (fun i -> Some (string_of_int i));;
+let unique_name = Stream.from (fun i -> Some ("x" ^ string_of_int i));;
+(* val string_of_tree : Tree.tree -> string *)
+let string_of_tree tree =
+  let buf = Buffer.create 1000 in
+  let rec s_t t = match t with
+    | Var v -> add_string buf v
+    | Appl (l,r) -> add_string buf "("; s_t l; add_string buf " "; s_t r; add_string buf ")"
+    | Abstr (v,r) -> add_string buf "(\\"; add_string buf v; add_string buf "."; s_t r; add_string buf ")"
+  in s_t tree;
+  contents buf;;
+(* let already_changed = Hashtbl.create 1000;; *)
 (* val change_vars : Tree.tree -> (string, string) Hashtbl.t -> Tree.tree *)
-let rec change_vars expr map =
-  (* merge_maps map; *)
-  (* print_hmap; *)
+let rec change_vars expr map changed =
+  fprintf oc "⚡️⚡️⚡️ expr: ";
+  fprintf oc "%s\n" (string_of_tree expr);
+  fprintf oc "🧨 changed:\n";
+  print_hmap changed;
+  fprintf oc "🥺 map:\n";
+  print_hmap map;
   (match expr with
-    | Var v -> if Hashtbl.mem map v
-               then Var(Hashtbl.find map v)
-               else expr
-    | Appl(l, r) -> Appl(change_vars l map, change_vars r map)
-    | Abstr(v, r) -> let new_var = (Stream.next unique_name)
-                      in Abstr(new_var, change_vars r (add_el_to_hmap map v new_var))
+    | Var v -> (fprintf oc "⌛️ var: %s\n" v;
+               if (Hashtbl.mem map v)
+               then (
+                  if (Hashtbl.mem changed v)
+                  then Var(List.hd (List.rev (Hashtbl.find_all map v)))
+                  else Var(Hashtbl.find map v))
+               else expr)
+    | Appl(l, r) -> (fprintf oc "⌛️ appl\n"; Appl(change_vars l map changed, change_vars r map changed))
+    | Abstr(v, r) -> (fprintf oc "⌛️ abstr\n";
+                     let new_var = (Stream.next unique_name)
+                     in
+                      if Hashtbl.mem map v
+                      then (Abstr(new_var, change_vars r (add_el_to_hmap map v new_var) (add_el_to_hmap changed v v)))
+                      else  Abstr(new_var, (change_vars r (add_el_to_hmap map v new_var) changed))
+                     )
   )
   ;;
 
@@ -79,7 +105,9 @@ let rec var_exists var whr = match whr with
   | Abstr (v,r) -> (var = v) || var_exists var r
 
 (* val reduction : Tree.tree -> Tree.tree *)
-let rec reduction expr = match expr with
+let rec reduction expr = (
+  fprintf oc "🌍🌍🌍 reduction of: %s" (string_of_tree expr);
+  match expr with
   | Var ov -> expr
   | Appl (l, r) -> (
     match l with
@@ -100,6 +128,9 @@ let rec reduction expr = match expr with
       | _ -> Appl(reduction l, reduction r)
     )
   | Abstr (ov, oe) -> VarSet.add ov var_set; Abstr(ov, reduction oe)
+  ;
+  (* fprintf oc "☁️☁️☁️ reduced: %s" (string_of_tree expr) *)
+  )
   ;;
 
 (* val get_original_var : string -> string *)
@@ -134,18 +165,10 @@ let rec change_vars_back expr = match expr with
 (* val try_to_reduce : Tree.tree -> Tree.tree *)
 let rec try_to_reduce tree = (*change_vars_back *)
   (if check_redex tree
-   then ((*printf "true\n";*) try_to_reduce (reduction (change_vars tree (Hashtbl.create 1000))))
+   then ((*printf "true\n";*) try_to_reduce (reduction (change_vars tree (Hashtbl.create 1000) (Hashtbl.create 1000))))
    else ((*printf "false\n";*) tree));;
 
-(* val string_of_tree : Tree.tree -> string *)
-let string_of_tree tree =
-  let buf = Buffer.create 1000 in
-  let rec s_t t = match t with
-    | Var v -> add_string buf v
-    | Appl (l,r) -> add_string buf "("; s_t l; add_string buf " "; s_t r; add_string buf ")"
-    | Abstr (v,r) -> add_string buf "(\\"; add_string buf v; add_string buf "."; s_t r; add_string buf ")"
-  in s_t tree;
-  contents buf;;
+
 
 (* val lines : string *)
 let lines =
@@ -158,8 +181,7 @@ let init = Buffer.create 100000 in
     (f (); contents init);;
 
 (* file input *)
-(* let (ic,oc) = (open_in "input.txt", open_out "output.txt");;
-ic >> input_line >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce (*>> change_vars_back *)>> string_of_tree >> printf "%s\n";; *)
+ic >> input_line >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce (*>> change_vars_back *)>> string_of_tree >> printf "%s\n";;
 
 (* terminal input *)
-lines >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce >> change_vars_back >> string_of_tree >> printf "%s\n";;
+(* lines >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce (*>> change_vars_back*) >> string_of_tree >> printf "%s\n";; *)
