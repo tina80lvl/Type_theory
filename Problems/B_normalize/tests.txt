@@ -8,10 +8,16 @@ OK
 (\a.\a.b) c
 
 OK
+(\z.((\z.z) (\x.\y.z)))
+
+WA
+(\z.((\x.z) (\z.z)))
+
+OK
 (\a.\x.a) (x y)
 
 OK
-(\x y z. (x z) (y z)) (\x.x) (\x.x)
+(\x.\y.\z. (x z) (y z)) (\x.x) (\x.x)
 
 OK cycle
 (\f.((\x.f (x x)) (\x.f (x x)))) p
@@ -31,13 +37,13 @@ OK
 OK
 (\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u)) (\f.\x.f (f (f x)))
 
-OK
+TL
 (\y.\m.y (\f.\n.(\s.(s (\x.\a.\b.b) (\a.\b.a)) (\f.\x.x) (f s)) (m n)) (\f.\x.f (f (f x)))) (\f.(\x.f (x x)) (\x.f (x x))) ((\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u)))
 
 TL (Y-combinator)
 (\o.\y.\m.\z.y (\g.\a.\b.o (z a) ((z b) (\a.\b.b) (g (m a) (m b))))) (\a.\b.a (\a.\b.a) b) (\f.(\x.f (x x)) (\x.f (x x))) ((\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u))) (\n.n (\u.(\a.\b.b)) (\a.\b.a)) (\f.\x.f (f (f (f x)))) (\f.\x.f (f x))
 
-OK
+TL
 (\y.\m.\z.y (\d3.\a.(z (m a)) (\f.\x.x) ((\n.\f.\x.n f (f x)) (d3 (m (m a)))))) (\f.(\x.f (x x)) (\x.f (x x))) ((\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u))) (\n.n (\u.\a.\b.b) (\a.\b.a)) (\f.\x.f (f (f (f (f (f (f (f x))))))))
 
 OK
