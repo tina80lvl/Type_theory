@@ -1,35 +1,129 @@
-⚡️⚡️⚡️ expr: (\z.((\x.(\z.x)) z))
+🍇lvl: 0
+⚡️⚡️⚡️ expr: ((\x.(\y.(x y))) (\a.a))
 🧨 changed:
-🥺 map:
-⌛️ abstr
-⚡️⚡️⚡️ expr: ((\x.(\z.x)) z)
-🧨 changed:
-🥺 map:
-k v = z x0
 ⌛️ appl
-⚡️⚡️⚡️ expr: z
+🍇lvl: 0
+⚡️⚡️⚡️ expr: (\a.a)
 🧨 changed:
-🥺 map:
-k v = z x0
-⌛️ var: z
-⚡️⚡️⚡️ expr: (\x.(\z.x))
-🧨 changed:
-🥺 map:
-k v = z x0
 ⌛️ abstr
-⚡️⚡️⚡️ expr: (\z.x)
+⚽️
+🍇lvl: 1
+⚡️⚡️⚡️ expr: a
 🧨 changed:
-🥺 map:
-k v = z x0
-k v = x x1
+(a, 1) x0
+⌛️ var: a
+looking for: a 1
+in 
+(a, 1) x0
+🚌 1
+🍇lvl: 0
+⚡️⚡️⚡️ expr: (\x.(\y.(x y)))
+🧨 changed:
+(a, 1) x0
 ⌛️ abstr
+⚽️
+🍇lvl: 1
+⚡️⚡️⚡️ expr: (\y.(x y))
+🧨 changed:
+(x, 1) x1
+(a, 1) x0
+⌛️ abstr
+⚽️
+🍇lvl: 2
+⚡️⚡️⚡️ expr: (x y)
+🧨 changed:
+(x, 1) x1
+(y, 2) x2
+(a, 1) x0
+⌛️ appl
+🍇lvl: 2
+⚡️⚡️⚡️ expr: y
+🧨 changed:
+(x, 1) x1
+(y, 2) x2
+(a, 1) x0
+⌛️ var: y
+looking for: y 2
+in 
+(x, 1) x1
+(y, 2) x2
+(a, 1) x0
+🚌 2
+🍇lvl: 2
 ⚡️⚡️⚡️ expr: x
 🧨 changed:
-k v = z 2
-🥺 map:
-k v = z x2
-k v = z x0
-k v = x x1
+(x, 1) x1
+(y, 2) x2
+(a, 1) x0
 ⌛️ var: x
-🌍🌍🌍 reduction of: (\x0.((\x1.(\x2.x1)) x0))
-🌍🌍🌍 reduction of: ((\x1.(\x2.x1)) x0)
+looking for: x 2
+in 
+(x, 1) x1
+(y, 2) x2
+(a, 1) x0
+looking for: x 1
+in 
+(x, 1) x1
+(y, 2) x2
+(a, 1) x0
+🚌 1
+🌍🌍🌍 reduction of: ((\x1.(\x2.(x1 x2))) (\x0.x0))
+🍇lvl: 0
+⚡️⚡️⚡️ expr: (\x2.((\x0.x0) x2))
+🧨 changed:
+(x, 1) x1
+(y, 2) x2
+(a, 1) x0
+⌛️ abstr
+⚽️
+🍇lvl: 1
+⚡️⚡️⚡️ expr: ((\x0.x0) x2)
+🧨 changed:
+(x, 1) x1
+(y, 2) x2
+(x2, 1) x3
+(a, 1) x0
+⌛️ appl
+🍇lvl: 1
+⚡️⚡️⚡️ expr: x2
+🧨 changed:
+(x, 1) x1
+(y, 2) x2
+(x2, 1) x3
+(a, 1) x0
+⌛️ var: x2
+looking for: x2 1
+in 
+(x, 1) x1
+(y, 2) x2
+(x2, 1) x3
+(a, 1) x0
+🚌 1
+🍇lvl: 1
+⚡️⚡️⚡️ expr: (\x0.x0)
+🧨 changed:
+(x, 1) x1
+(y, 2) x2
+(x2, 1) x3
+(a, 1) x0
+⌛️ abstr
+⚽️
+🍇lvl: 2
+⚡️⚡️⚡️ expr: x0
+🧨 changed:
+(x0, 2) x4
+(x, 1) x1
+(y, 2) x2
+(x2, 1) x3
+(a, 1) x0
+⌛️ var: x0
+looking for: x0 2
+in 
+(x0, 2) x4
+(x, 1) x1
+(y, 2) x2
+(x2, 1) x3
+(a, 1) x0
+🚌 2
+🌍🌍🌍 reduction of: (\x3.((\x4.x4) x3))
+🌍🌍🌍 reduction of: ((\x4.x4) x3)

@@ -42,9 +42,7 @@ let free_to_sub theta expr x =
       ;;
 
 (* let print_hmap hm = Hashtbl.iter (fun x y -> fprintf oc "k v = %s %s\n" x y) hm;; *)
-(* val add_el_to_hmap : (string, string) Hashtbl.t -> string -> string -> (string, string) Hashtbl.t *)
-let add_el_to_hmap map k v = (*printf "%s %s\n" k, v;*) Hashtbl.add map k v; Hashtbl.add global_vars v k; map;;
-let rem_el_from_hmap map k = (*printf "%s %s\n" k, v;*) Hashtbl.remove map k; map;;
+(* let print_pair_hmap hm = Hashtbl.iter (fun (a,b) y -> fprintf oc "(%s, %d) %s\n" a b y) hm;; *)
 
 (* val merge_maps : (string, string) Hashtbl.t -> unit *)
 let merge_maps map = Hashtbl.iter (fun x y -> Hashtbl.add map x y) global_vars;;
@@ -62,44 +60,52 @@ let string_of_tree tree =
 (* let already_changed = Hashtbl.create 1000;; *)
 
 let gel_last lst = List.nth lst ((List.length lst) - 1);;
+let changed_vars = Hashtbl.create 1000;;
 
-let ret_var v map changed cnt =
-  if (Hashtbl.mem map v)
-  then (
-     if (Hashtbl.mem changed v)
-     then (
-       if (List.mem (string_of_int cnt) (Hashtbl.find_all changed v))
-       then (
-        let l_list = Hashtbl.find_all map v in List.nth (l_list) ((List.length l_list) - cnt) (* TODO think about mistake *)
-       )
-       else (let n_v = (Stream.next unique_name) in Hashtbl.add changed v n_v; n_v)
-     )
-     else (Hashtbl.find map v))
-  else v
+let add_pair_to_hmap l r v =
+  (*fprintf oc "add: (%s %d), %s\n" l r v; *)
+  Hashtbl.add changed_vars (l,r) v;;
+
+let ret_var v cnt =
+  if Hashtbl.mem changed_vars (v,cnt)
+  then Hashtbl.find changed_vars (v,cnt)
+  else
+    let n_v = (Stream.next unique_name)
+    in
+      (* fprintf oc "⚽️\n"; *)
+      add_pair_to_hmap v cnt n_v;
+      n_v
+  ;;
+
+let last_cnt v cnt =
+  let rec l_c c = (
+    (* fprintf oc "looking for: %s %d\nin \n" v c; print_pair_hmap changed_vars; *)
+    if (Hashtbl.mem changed_vars (v,c))
+    then c
+    else (if (c > 0) then l_c (c - 1) else -1))
+  in l_c cnt
   ;;
 (* val change_vars : Tree.tree -> (string, string) Hashtbl.t -> Tree.tree *)
-let rec change_vars expr map changed cnt =
-  (* fprintf oc "⚡️⚡️⚡️ expr: ";
-  fprintf oc "%s\n" (string_of_tree expr);
-  fprintf oc "🧨 changed:\n";
-  print_hmap changed;
-  fprintf oc "🥺 map:\n";
-  print_hmap map; *)
+let rec change_vars expr cnt =
+  (* fprintf oc "🍇lvl: %d\n⚡️⚡️⚡️ expr: %s\n🧨 changed:\n" cnt (string_of_tree expr); print_pair_hmap changed_vars; (* DEBUG *) *)
   (match expr with
     | Var v -> (
-      (* fprintf oc "⌛️ var: %s\n" v; *)
-      Var(ret_var v map changed cnt))
+      (* fprintf oc "⌛️ var: %s\n" v; (* DEBUG *) *)
+      let n_c = last_cnt v cnt
+      in (
+        (* fprintf oc "🚌 %d\n" n_c; *)
+        if (n_c > -1)
+        then Var(ret_var v n_c)
+        else (add_pair_to_hmap v cnt v; Var(v))
+         )
+      )
     | Appl(l, r) -> (
-      (* fprintf oc "⌛️ appl\n"; *)
-      Appl(change_vars l map changed cnt, change_vars r map changed cnt))
+      (* fprintf oc "⌛️ appl\n";  *)
+      Appl(change_vars l cnt, change_vars r cnt))
     | Abstr(v, r) -> (
-      (* fprintf oc "⌛️ abstr\n"; *)
-                     let new_var = (Stream.next unique_name)
-                     in
-                      if Hashtbl.mem map v
-                      then (Abstr(ret_var v map changed cnt, change_vars r (add_el_to_hmap map v new_var) (add_el_to_hmap changed v (string_of_int cnt)) (cnt + 1)))
-                      else  Abstr(new_var, (change_vars r (add_el_to_hmap map v new_var) changed (cnt + 1)))
-                     )
+      (* fprintf oc "⌛️ abstr\n"; (* DEBUG *) *)
+      let vr = ret_var v (cnt + 1) in
+      (Abstr(vr, change_vars r (cnt + 1))) )
   )
   ;;
 
@@ -122,6 +128,7 @@ let rec var_exists var whr = match whr with
 
 (* val reduction : Tree.tree -> Tree.tree *)
 let rec reduction expr = (
+  (* print_pair_hmap changed_vars; *)
   (* fprintf oc "🌍🌍🌍 reduction of: %s\n" (string_of_tree expr); *)
   match expr with
   | Var ov -> expr
@@ -145,7 +152,6 @@ let rec reduction expr = (
     )
   | Abstr (ov, oe) -> VarSet.add ov var_set; Abstr(ov, reduction oe)
   ;
-  (* fprintf oc "☁️☁️☁️ reduced: %s" (string_of_tree expr) *)
   )
   ;;
 
@@ -181,10 +187,8 @@ let rec change_vars_back expr = match expr with
 (* val try_to_reduce : Tree.tree -> Tree.tree *)
 let rec try_to_reduce tree = (*change_vars_back *)
   (if check_redex tree
-   then ((*printf "true\n";*) try_to_reduce (reduction (change_vars tree (Hashtbl.create 1000) (Hashtbl.create 1000) 0)))
+   then ((*printf "true\n";*) try_to_reduce (reduction (change_vars tree 0)))
    else ((*printf "false\n";*) tree));;
-
-
 
 (* val lines : string *)
 let lines =
