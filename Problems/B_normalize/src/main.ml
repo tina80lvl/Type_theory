@@ -8,7 +8,7 @@ let (>>) x f = f x;;
 (* let (ic,oc) = (open_in "input.txt", open_out "output.txt");; *)
 (* let print_pair_hmap hm = Hashtbl.iter (fun (a,b) y -> fprintf oc "(%s, %d) %s\n" a b y) hm;; *)
 
-let unique_name = Stream.from (fun i -> Some ("x" ^ string_of_int i));;
+let unique_name = Stream.from (fun i -> Some (string_of_int i));;
 let string_of_tree tree =
   let buf = Buffer.create 1000 in
   let rec s_t t = match t with
@@ -28,7 +28,7 @@ let ret_var v cnt =
   if Hashtbl.mem changed_vars (v,cnt)
   then Hashtbl.find changed_vars (v,cnt)
   else
-    let n_v = (Stream.next unique_name)
+    let n_v = (String.make 1 (String.get v 0)) ^ (Stream.next unique_name)
     in
       (* fprintf oc "⚽️\n"; *)
       add_pair_to_hmap v cnt n_v;
@@ -68,7 +68,7 @@ let rec change_vars expr cnt =
     | Abstr(v, r) -> (
       (* fprintf oc "⌛️ abstr\n"; (* DEBUG *) *)
       let vr = ret_var v (cnt + 1)
-        in let tmp = (Abstr(vr, change_vars r (cnt + 1))) 
+        in let tmp = (Abstr(vr, change_vars r (cnt + 1)))
             in Hashtbl.remove changed_vars (v, cnt + 1); tmp;
       )
   )
@@ -77,11 +77,11 @@ let rec change_vars expr cnt =
 let rec check_redex tree =
  (* printf "checking redex = %s\n" (string_of_tree tree); *)
   match tree with
-  | Var v -> (*printf "flag 4\n";*) false
-  | Appl (l, r) -> (*printf "flag 5\n";*)(match l with
+  | Var v -> false
+  | Appl (l, r) -> (match l with
                     | Abstr (v1, r1) -> true
                     | _ -> (check_redex l || check_redex r))
-  | Abstr (v, r) -> (*printf "flag 6\n";*) check_redex r
+  | Abstr (v, r) -> check_redex r
   ;;
 
 let rec reduction expr = (
