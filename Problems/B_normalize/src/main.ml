@@ -18,8 +18,7 @@ let string_of_tree tree =
   in s_t tree;
   contents buf;;
 
-let gel_last lst = List.nth lst ((List.length lst) - 1);;
-let changed_vars = Hashtbl.create 1000;;
+let changed_vars = Hashtbl.create 100000;;
 
 let add_pair_to_hmap l r v =
   (*fprintf oc "add: (%s %d), %s\n" l r v; *)
@@ -60,13 +59,17 @@ let rec change_vars expr cnt =
       )
     | Appl(l, r) -> (
       (* fprintf oc "⌛️ appl\n";  *)
-      Appl(change_vars l cnt, change_vars r cnt))
+      (* let lft = change_vars l cnt
+      in
+        let rht = change_vars r cnt
+        in Appl(lft, rht) *)
+        Appl(change_vars l cnt, change_vars r cnt)
+      )
     | Abstr(v, r) -> (
       (* fprintf oc "⌛️ abstr\n"; (* DEBUG *) *)
-      let vr = ret_var v (cnt + 1) in
-      let tmp = (Abstr(vr, change_vars r (cnt + 1))) in
-      Hashtbl.remove changed_vars (v, cnt + 1);
-      tmp;
+      let vr = ret_var v (cnt + 1)
+        in let tmp = (Abstr(vr, change_vars r (cnt + 1))) 
+            in Hashtbl.remove changed_vars (v, cnt + 1); tmp;
       )
   )
   ;;
@@ -96,13 +99,18 @@ let rec reduction expr = (
                 if vs = var
                 then expr_to_subs
                 else Var(vs)
-              | Appl (ls,rs) -> (*printf "flag 2\n";*) Appl ((subs ls), (subs rs))
-              | Abstr (vs,rs) -> (*printf "flag 3\n";*)
-                if vs == var then Abstr(vs, rs)
-                             else Abstr(vs, subs rs)
+                | Appl (ls,rs) -> (*printf "flag 2\n";*)
+                  let l_a = (subs ls)
+                  in let r_a = (subs rs)
+                      in Appl (l_a, r_a)
+                | Abstr (vs,rs) -> (*printf "flag 3\n";*)
+                  if vs == var then Abstr(vs, rs)
+                               else Abstr(vs, subs rs)
             in subs expr_of_abstraction;
         in substitute rr v r;
-      | _ -> Appl(reduction l, reduction r)
+      | _ -> let l_a = (reduction l)
+               in let r_a = (reduction r)
+                    in Appl (l_a, r_a)
     )
   | Abstr (ov, oe) -> Abstr(ov, reduction oe)
   ;
