@@ -28,7 +28,7 @@ let ret_var v cnt =
   if Hashtbl.mem changed_vars (v,cnt)
   then Hashtbl.find changed_vars (v,cnt)
   else
-    let n_v = (String.make 1 (String.get v 0)) ^ (Stream.next unique_name)
+    let n_v = (String.make 1 (String.get v 0)) ^ (Stream.next unique_name) ^ "lol"
     in
       (* fprintf oc "⚽️\n"; *)
       add_pair_to_hmap v cnt n_v;
