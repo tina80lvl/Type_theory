@@ -104,7 +104,7 @@ let rec reduction expr = (
                   in let r_a = (subs rs)
                       in Appl (l_a, r_a)
                 | Abstr (vs,rs) -> (*printf "flag 3\n";*)
-                  if vs == var then Abstr(vs, rs)
+                  if vs = var then Abstr(vs, rs)
                                else Abstr(vs, subs rs)
             in subs expr_of_abstraction;
         in substitute rr v r;
