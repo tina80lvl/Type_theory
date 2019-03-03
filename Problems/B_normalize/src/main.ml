@@ -28,7 +28,7 @@ let ret_var v cnt =
   if Hashtbl.mem changed_vars (v,cnt)
   then Hashtbl.find changed_vars (v,cnt)
   else
-    let n_v = (String.make 1 (String.get v 0)) ^ (Stream.next unique_name) ^ "lol"
+    let n_v = v ^ (Stream.next unique_name)
     in
       (* fprintf oc "⚽️\n"; *)
       add_pair_to_hmap v cnt n_v;
@@ -44,7 +44,7 @@ let last_cnt v cnt =
   in l_c cnt
   ;;
 
-let rec change_vars expr cnt =
+let rec change_vars cnt expr =
   (* fprintf oc "🍇lvl: %d\n⚡️⚡️⚡️ expr: %s\n🧨 changed:\n" cnt (string_of_tree expr); print_pair_hmap changed_vars; (* DEBUG *) *)
   (match expr with
     | Var v -> (
@@ -59,16 +59,16 @@ let rec change_vars expr cnt =
       )
     | Appl(l, r) -> (
       (* fprintf oc "⌛️ appl\n";  *)
-      (* let lft = change_vars l cnt
+      (* let lft = change_vars cnt l
       in
-        let rht = change_vars r cnt
+        let rht = change_vars cnt r
         in Appl(lft, rht) *)
-        Appl(change_vars l cnt, change_vars r cnt)
+        Appl(change_vars cnt l, change_vars cnt r)
       )
     | Abstr(v, r) -> (
       (* fprintf oc "⌛️ abstr\n"; (* DEBUG *) *)
       let vr = ret_var v (cnt + 1)
-        in let tmp = (Abstr(vr, change_vars r (cnt + 1)))
+        in let tmp = (Abstr(vr, change_vars (cnt + 1) r))
             in Hashtbl.remove changed_vars (v, cnt + 1); tmp;
       )
   )
@@ -120,7 +120,7 @@ let rec reduction expr = (
 let rec try_to_reduce tree = (*change_vars_back *)
 (* fprintf oc "🎀 reduction of: %s\n" (string_of_tree tree); *)
   (if check_redex tree
-   then ((*printf "true\n";*) try_to_reduce (reduction (change_vars tree 0)))
+   then ((*printf "true\n";*) try_to_reduce (reduction tree))
    else ((*printf "false\n";*) tree));;
 
 let lines =
@@ -136,4 +136,4 @@ let init = Buffer.create 100000 in
 (* ic >> input_line >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce (*>> change_vars_back *)>> string_of_tree >> printf "%s\n";; *)
 
 (* terminal input *)
-lines >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce (*>> change_vars_back*) >> string_of_tree >> printf "%s\n";;
+lines >> Lexing.from_string >> Parser.main Lexer.main >> change_vars 0 >> try_to_reduce (*>> change_vars_back*) >> string_of_tree >> printf "%s\n";;
