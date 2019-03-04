@@ -5,7 +5,7 @@ open Hashtbl;;
 
 let (>>) x f = f x;;
 
-let (ic,oc) = (open_in "input.txt", open_out "output.txt");;
+(* let (ic,oc) = (open_in "input.txt", open_out "output.txt");; *)
 type deBruijn = DB_free of string | DB_bound of int | DB_appl of deBruijn * deBruijn | DB_abstr of deBruijn;;
 
 let rec to_deBruijn bounded expr = match expr with
@@ -24,7 +24,7 @@ let rec to_deBruijn bounded expr = match expr with
 let rec inc_vars expr loc_lvl exp_lvl = match expr with
   | DB_free ov -> expr
   | DB_bound ov ->
-    if (ov > exp_lvl)
+    if (ov >= exp_lvl)
     then DB_bound(ov + loc_lvl)
     else DB_bound(ov)
   | DB_appl (l, r) -> DB_appl(inc_vars l loc_lvl exp_lvl, inc_vars r loc_lvl exp_lvl)
@@ -42,7 +42,7 @@ let string_of_db tree =
   contents buf;;
 
 let rec reduction expr lvl = (
-  fprintf oc "🌍🌍🌍 reduction of: %s\n" (string_of_db expr);
+  (* fprintf oc "🌍🌍🌍 reduction of: %s\n" (string_of_db expr); *)
   match expr with
   | DB_free ov -> expr
   | DB_bound ov -> expr
@@ -50,10 +50,10 @@ let rec reduction expr lvl = (
     match l with
       | DB_abstr (rr) -> (* rr - expression without variable of abstraction *)
         let substitute expr_of_abstraction expr_to_subs =
-          fprintf oc "expr_of_abstr = %s\n" (string_of_db expr_of_abstraction);
-          fprintf oc "expr_to_subs = %s\n" (string_of_db expr_to_subs);
+          (* fprintf oc "expr_of_abstr = %s\n" (string_of_db expr_of_abstraction);
+          fprintf oc "expr_to_subs = %s\n" (string_of_db expr_to_subs); *)
             let rec subs e loc_lvl =
-              fprintf oc "e = %s\n" (string_of_db e);
+              (* fprintf oc "e = %s\n" (string_of_db e); *)
               (match e with
               | DB_free dv -> e
               | DB_bound dv ->
