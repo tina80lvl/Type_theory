@@ -5,123 +5,111 @@ open Hashtbl;;
 
 let (>>) x f = f x;;
 
-(* let (ic,oc) = (open_in "input.txt", open_out "output.txt");; *)
-(* let print_pair_hmap hm = Hashtbl.iter (fun (a,b) y -> fprintf oc "(%s, %d) %s\n" a b y) hm;; *)
+let (ic,oc) = (open_in "input.txt", open_out "output.txt");;
+type deBruijn = DB_free of string | DB_bound of int | DB_appl of deBruijn * deBruijn | DB_abstr of deBruijn;;
 
-let unique_name = Stream.from (fun i -> Some (string_of_int i));;
-let string_of_tree tree =
+let rec to_deBruijn bounded expr = match expr with
+  | Var v -> (
+    let rec is_bounded it arr = match arr with
+      | x::tl -> if (v = x) then Some(it) else is_bounded (it + 1) tl
+      | [] -> None
+    in (match (is_bounded 0 bounded) with
+      | Some(x) -> DB_bound(x)
+      | None -> DB_free(v) )
+    )
+  | Appl(l, r) -> DB_appl((to_deBruijn bounded l), (to_deBruijn bounded r))
+  | Abstr(v, r) -> DB_abstr(to_deBruijn (v::bounded) r)
+  ;;
+
+let rec inc_vars expr loc_lvl exp_lvl = match expr with
+  | DB_free ov -> expr
+  | DB_bound ov ->
+    if (ov > exp_lvl)
+    then DB_bound(ov + loc_lvl)
+    else DB_bound(ov)
+  | DB_appl (l, r) -> DB_appl(inc_vars l loc_lvl exp_lvl, inc_vars r loc_lvl exp_lvl)
+  | DB_abstr (r) -> DB_abstr(inc_vars r loc_lvl (exp_lvl + 1))
+  ;;
+
+let string_of_db tree =
   let buf = Buffer.create 1000 in
   let rec s_t t = match t with
-    | Var v -> add_string buf v
-    | Appl (l,r) -> add_string buf "("; s_t l; add_string buf " "; s_t r; add_string buf ")"
-    | Abstr (v,r) -> add_string buf "(\\"; add_string buf v; add_string buf "."; s_t r; add_string buf ")"
+  | DB_free v -> add_string buf v
+  | DB_bound v -> add_string buf (string_of_int v)
+  | DB_appl (l,r) -> add_string buf "("; s_t l; add_string buf " "; s_t r; add_string buf ")"
+  | DB_abstr (r) -> add_string buf "(\\"; (*add_string buf v;*) add_string buf "."; s_t r; add_string buf ")"
   in s_t tree;
   contents buf;;
 
-let changed_vars = Hashtbl.create 100000;;
-
-let add_pair_to_hmap l r v =
-  (*fprintf oc "add: (%s %d), %s\n" l r v; *)
-  Hashtbl.add changed_vars (l,r) v;;
-
-let ret_var v cnt =
-  if Hashtbl.mem changed_vars (v,cnt)
-  then Hashtbl.find changed_vars (v,cnt)
-  else
-    let n_v = v ^ (Stream.next unique_name)
-    in
-      (* fprintf oc "⚽️\n"; *)
-      add_pair_to_hmap v cnt n_v;
-      n_v
-  ;;
-
-let last_cnt v cnt =
-  let rec l_c c = (
-    (* fprintf oc "looking for: %s %d\nin \n" v c; print_pair_hmap changed_vars; *)
-    if (Hashtbl.mem changed_vars (v,c))
-    then c
-    else (if (c > 0) then l_c (c - 1) else -1))
-  in l_c cnt
-  ;;
-
-let rec change_vars cnt expr =
-  (* fprintf oc "🍇lvl: %d\n⚡️⚡️⚡️ expr: %s\n🧨 changed:\n" cnt (string_of_tree expr); print_pair_hmap changed_vars; (* DEBUG *) *)
-  (match expr with
-    | Var v -> (
-      (* fprintf oc "⌛️ var: %s\n" v; (* DEBUG *) *)
-      let n_c = last_cnt v cnt
-      in (
-        (* fprintf oc "🚌 %d\n" n_c; *)
-        if (n_c > -1)
-        then Var(ret_var v n_c)
-        else (add_pair_to_hmap v cnt v; Var(v))
-         )
-      )
-    | Appl(l, r) -> (
-      (* fprintf oc "⌛️ appl\n";  *)
-      (* let lft = change_vars cnt l
-      in
-        let rht = change_vars cnt r
-        in Appl(lft, rht) *)
-        Appl(change_vars cnt l, change_vars cnt r)
-      )
-    | Abstr(v, r) -> (
-      (* fprintf oc "⌛️ abstr\n"; (* DEBUG *) *)
-      let vr = ret_var v (cnt + 1)
-        in let tmp = (Abstr(vr, change_vars (cnt + 1) r))
-            in Hashtbl.remove changed_vars (v, cnt + 1); tmp;
-      )
+let rec reduction expr lvl = (
+  fprintf oc "🌍🌍🌍 reduction of: %s\n" (string_of_db expr);
+  match expr with
+  | DB_free ov -> expr
+  | DB_bound ov -> expr
+  | DB_appl (l, r) -> (
+    match l with
+      | DB_abstr (rr) -> (* rr - expression without variable of abstraction *)
+        let substitute expr_of_abstraction expr_to_subs =
+          fprintf oc "expr_of_abstr = %s\n" (string_of_db expr_of_abstraction);
+          fprintf oc "expr_to_subs = %s\n" (string_of_db expr_to_subs);
+            let rec subs e loc_lvl =
+              fprintf oc "e = %s\n" (string_of_db e);
+              (match e with
+              | DB_free dv -> e
+              | DB_bound dv ->
+                if dv = loc_lvl
+                then inc_vars expr_to_subs (loc_lvl) 0
+                else
+                  if dv >= loc_lvl
+                  then DB_bound(dv - 1) (* from wiki *)
+                  else e
+              | DB_appl (ls,rs) -> DB_appl (subs ls loc_lvl, subs rs loc_lvl)
+              | DB_abstr (rs) -> DB_abstr(subs rs (loc_lvl + 1)) )
+            in subs expr_of_abstraction 0;
+        in substitute rr r;
+      | _ -> DB_appl(reduction l lvl, reduction r lvl)
+    )
+  | DB_abstr (oe) -> DB_abstr(reduction oe (lvl + 1))
   )
   ;;
 
 let rec check_redex tree =
  (* printf "checking redex = %s\n" (string_of_tree tree); *)
   match tree with
-  | Var v -> false
-  | Appl (l, r) -> (match l with
-                    | Abstr (v1, r1) -> true
+  | DB_free v -> false
+  | DB_bound v -> false
+  | DB_appl (l, r) -> (match l with
+                    | DB_abstr (r1) -> true
                     | _ -> (check_redex l || check_redex r))
-  | Abstr (v, r) -> check_redex r
-  ;;
-
-let rec reduction expr = (
-  (* print_pair_hmap changed_vars; *)
-  (* fprintf oc "🌍🌍🌍 reduction of: %s\n" (string_of_tree expr); *)
-  match expr with
-  | Var ov -> expr
-  | Appl (l, r) -> (
-    match l with
-      | Abstr (v,rr) -> (* rr - expression without variable of abstraction *)
-        let substitute expr_of_abstraction var expr_to_subs =
-          (* printf "var_s = %s\n" var; printf "expr_to_subs = %s\n" (string_of_tree r);*)
-            let rec subs e = match e with
-              | Var vs -> (*printf "flag 1 %s %s\n" vs var;*)
-                if vs = var
-                then expr_to_subs
-                else Var(vs)
-                | Appl (ls,rs) -> (*printf "flag 2\n";*)
-                  let l_a = (subs ls)
-                  in let r_a = (subs rs)
-                      in Appl (l_a, r_a)
-                | Abstr (vs,rs) -> (*printf "flag 3\n";*)
-                  if vs = var then Abstr(vs, rs)
-                               else Abstr(vs, subs rs)
-            in subs expr_of_abstraction;
-        in substitute rr v r;
-      | _ -> let l_a = (reduction l)
-               in let r_a = (reduction r)
-                    in Appl (l_a, r_a)
-    )
-  | Abstr (ov, oe) -> Abstr(ov, reduction oe)
-  ;
-  )
+  | DB_abstr (r) -> check_redex r
   ;;
 
 let rec try_to_reduce tree = (*change_vars_back *)
 (* fprintf oc "🎀 reduction of: %s\n" (string_of_tree tree); *)
   (if check_redex tree
-   then ((*printf "true\n";*) try_to_reduce (reduction tree))
+   then ((*printf "true\n";*) try_to_reduce (reduction tree 0))
    else ((*printf "false\n";*) tree));;
+
+let unique_name = Stream.from (fun i -> Some ("x" ^ string_of_int i));;
+let rec give_names tree hmap lvl = match tree with
+  | DB_free v -> Var(v)
+  | DB_bound v -> Var(Hashtbl.find hmap (lvl - v - 1))
+  | DB_appl (l, r) -> Appl(give_names l hmap lvl, give_names r hmap lvl)
+  | DB_abstr (r) -> (
+    let n_v = (Stream.next unique_name)
+    in let tmp = Abstr(n_v, give_names r (Hashtbl.add hmap lvl n_v; hmap) (lvl + 1)) in
+    Hashtbl.remove hmap lvl;
+    tmp)
+  ;;
+
+let string_of_tree tree =
+  let buf = Buffer.create 1000 in
+  let rec s_t t = match t with
+    | Var v -> add_string buf v
+    | Appl (l,r) -> add_string buf "("; s_t l; add_string buf " "; s_t r; add_string buf ")"
+    | Abstr (v,r) -> add_string buf "(\\"; add_string buf v; add_string buf "."; s_t r; add_string buf ")"
+  in s_t (give_names tree (Hashtbl.create 1000) 0);
+  contents buf;;
 
 let lines =
 let init = Buffer.create 100000 in
@@ -136,4 +124,4 @@ let init = Buffer.create 100000 in
 (* ic >> input_line >> Lexing.from_string >> Parser.main Lexer.main >> try_to_reduce (*>> change_vars_back *)>> string_of_tree >> printf "%s\n";; *)
 
 (* terminal input *)
-lines >> Lexing.from_string >> Parser.main Lexer.main >> change_vars 0 >> try_to_reduce (*>> change_vars_back*) >> string_of_tree >> printf "%s\n";;
+lines >> Lexing.from_string >> Parser.main Lexer.main >> to_deBruijn [] >> try_to_reduce >> string_of_tree >> printf "%s\n";;

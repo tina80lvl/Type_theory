@@ -17,6 +17,9 @@ run: main.exe
 src/tree.cmi:
 	cd src && $(OCAMLC) -c tree.ml
 
+type:
+	cd src && $(OCAMLC) -i main.ml
+
 main.exe: $(GENERATED) src/tree.cmi
 	cd src && $(OCAMLC) tree.ml $(GENERATED:src/%=%) main.ml -o ../main.exe
 

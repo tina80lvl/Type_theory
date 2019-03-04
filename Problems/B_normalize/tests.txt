@@ -8,7 +8,7 @@ y
 
 OK
 (\a.\a.b) c
-(\x1.b)
+(\x0.b)
 
 OK
 (\z.((\z.z) (\x.\y.z)))
@@ -20,32 +20,32 @@ OK
 
 OK
 (\a.\x.a) (x y)
-(\x1.(x y))
+(\x0.(x y))
 
 OK
 (\x.\y.\z. (x z) (y z)) (\x.x) (\x.x)
-(\x9.(x9 x9))
+(\x0.(x0 x0))
 
 OK cycle
 (\f.((\x.f (x x)) (\x.f (x x)))) p
 
 OK
 (\x.\y.x y) (\a.a)
-(\x3.x3)
+(\x0.x0)
 
 OK
 (\x.\y.x y) \x.x
-(\x3.x3)
+(\x0.x0)
 
 OK
 (\x.\y.\z.x y z) (\x.\y.x y)
-(\x9.(\x10.(x9 x10)))
+(\x0.(\x1.(x0 x1)))
 
 OK
 (\x.\y.\z.(x y z)) (\a.\b.(a b))
-(\x9.(\x10.(x9 x10)))
+(\x0.(\x1.(x0 x1)))
 
-OK
+WA 5
 (\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u)) (\f.\x.f (f (f x)))
 (\x77.(\x78.(x77 (x77 x78))))
 
@@ -55,35 +55,27 @@ OK
 
 OK (Y-combinator)
 (\o.\y.\m.\z.y (\g.\a.\b.o (z a) ((z b) (\a.\b.b) (g (m a) (m b))))) (\a.\b.a (\a.\b.a) b) (\f.(\x.f (x x)) (\x.f (x x))) ((\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u))) (\n.n (\u.(\a.\b.b)) (\a.\b.a)) (\f.\x.f (f (f (f x)))) (\f.\x.f (f x))
-(\x8531.(\x8532.x8532))
+(\x0.(\x1.x1))
 
 OK
 (\y.\m.\z.y (\d3.\a.(z (m a)) (\f.\x.x) ((\n.\f.\x.n f (f x)) (d3 (m (m a)))))) (\f.(\x.f (x x)) (\x.f (x x))) ((\n.\f.\x.n (\g.\h.h (g f)) (\u.x) (\u.u))) (\n.n (\u.\a.\b.b) (\a.\b.a)) (\f.\x.f (f (f (f (f (f (f (f x))))))))
-(\x458351.(\x458352.(x458351 (x458351 (x458351 (x458351 x458352))))))
+(\x0.(\x1.(x0 (x0 (x0 (x0 x1))))))
 
 OK
 (\a.\b.b) (\f.((\x.f (x x)) (\x.f (x x)))) f
 f
 
 OK
-(\x.x) z
-z
-
-OK
 (\a.a) x y
 (x y)
 
 OK
-(\a.\b.a) (x y)
-(\x1.(x y))
-
-OK
 ((\x.x (\x.x)) y)
-(y (\x1.x1))
+(y (\x0.x0))
 
 OK
 ((\x.\y.\z.x z (y z)) (\x.\y.x) (\x.x))
-(\x15.x15)
+(\x0.x0)
 
 OK
 (\x.((\y.y) z))
@@ -93,7 +85,7 @@ OK
 ((\x.\y.y x) ((\x.x x) (\x.x x))) (\x.a)
 a
 
-OK
+WA
 (\a.(\k.(a k))) (\u.(\i.(\k.(u i))) k)
 (\x9.(\x11.(x9 k)))
 
