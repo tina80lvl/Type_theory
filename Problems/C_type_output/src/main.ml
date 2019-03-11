@@ -12,25 +12,31 @@ type type_eq = EqT of type_of_type * type_of_type;;
 module TabsMap = Map.Make(type_of_type);;
 let equations = [];;
 let types = [];;
-let tabs = [];;
-let types_map = TypesMap.empty;; *)
+let tabs = [];;*)
+let types_map = TypesMap.empty;;
 
 let unique_type = Stream.from (fun i -> Some ("t" ^ string_of_int i));;
 let next_type = (Stream.next unique_type);;
 
-let rec put_tab tb str = if tb == 0 then str in put_tab (tb - 1) (str + "*   ");;
+let rec put_tab tb str = if tb == 0 then str else put_tab (tb - 1) (str + "*   ");;
 
 (* TODO: not sure about adding equations *)
 let rec build_system expr tb = match expr with
-  | Var v -> let n_t = (if TypeMap.mem v types_map then TypeMap.key v types_map else next_type)
+  | Var v -> let n_t = (if TypeMap.mem v types_map
+                        then TypeMap.key v types_map
+                        else next_type)
              in TypesMap.add Var(v) n_t types_map;
              n_t;
-  | Appl (l, r) -> let t_l = build_system l (tb + 1) and t_r = build_system r (tb + 1)
+  | Appl (l, r) -> let t_l =
+                      build_system l (tb + 1) and t_r = build_system r (tb + 1)
                    in let n_t = next_type in
                    (*equations.append SimpleT(t_l); equations.append SimpleT(t_r);*)
                    equations.append EqT(t_l, ComplexT(t_r, n_t)); TypesMap.add Appl(l, r) n_t types_map;
                    n_t;
-  | Abstr (v, r) -> let t_v = (if TypeMap.mem v types_map then TypeMap.key v types_map else next_type) and t_r = build_system r (tb + 1)
+  | Abstr (v, r) -> let t_v = (
+                      if TypeMap.mem v types_map
+                      then TypeMap.key v types_map
+                      else next_type) and t_r = build_system r (tb + 1)
                     in (*equations.append SimpleT(t_r);*)
                     TypesMap.add Abstr(v,r) ComplexT(TypesMap.key v types_map, t_r) types_map;
                     ComplexT(TypesMap.key v types_map, t_r);;
@@ -54,9 +60,13 @@ let rec reduce_all eq = function
   | x::lst -> if x == eq
               then
                 (match x with
-                  | EqT(t1, t2) -> let rec red e1 e2 = match e1 with
-                    | SimpleT st -> EqT(e1,e2)::lst
-                    | ComplexT (ct1, ct2) -> red ct1 ct2)
+                  | EqT(t1, t2) -> (
+                    let rec red e1 e2 = match e1 with
+                      | SimpleT st -> EqT(e1,e2)::lst
+                      | ComplexT (ct1, ct2) -> red ct1 ct2
+                    in red t1 t2
+                    )
+                )
               else x::(reduce_all eq lst)
   ;;
 
@@ -85,7 +95,20 @@ let step2 system =
     in next_eq system []
     ;;
 
-let step3 =
+let step3 system =
+  let rec next_eq lst n_system = match lst with
+    | x::tl -> (match x with
+      | EqT (l, r) -> match l with
+        | SimpleT t -> (next_eq tl x::n_system)
+        | ComplexT (t1, t2) -> (match r with
+          | SimpleT st -> (next_eq tl x::n_system)
+          | ComplexT (ct1, ct2) -> next_eq tl Eq(t1,ct1)::Eq(t2,ct2)::n_system
+          )
+      | _ -> (next_eq tl x::n_system) (* not sure *)
+      )
+    | [] -> n_system (* not sure *)
+    in next_eq system []
+    ;;
 
 let vars_to_change = Hashtbl.create 1000;;
 let substitute system =
