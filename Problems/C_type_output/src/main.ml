@@ -1,25 +1,22 @@
 open Tree;;
 open Buffer;;
 open Printf;;
+open Hashtbl;;
 
 let (>>) x f = f x;;
 
 type type_of_type = SimpleT of int | ComplexT of type_of_type * type_of_type;;
 type type_eq = EqT of type_of_type * type_of_type;;
 
-module TypesMap = Map.Make(type_of_type);;
+(* module TypesMap = Map.Make(type_of_type);;
 module TabsMap = Map.Make(type_of_type);;
 let equations = [];;
 let types = [];;
 let tabs = [];;
-let types_map = TypesMap.empty;;
+let types_map = TypesMap.empty;; *)
 
-let next_type =
-  let last t_l = match t_l with
-  | x::l -> (x + 1) :: types; SimpleT(x + 1); (* what if there's only one element? *)
-  | [] -> 1 :: types; SimpleT(1);
-  in last types
-  ;;
+let unique_type = Stream.from (fun i -> Some ("t" ^ string_of_int i));;
+let next_type = (Stream.next unique_type);;
 
 let rec put_tab tb str = if tb == 0 then str in put_tab (tb - 1) (str + "*   ");;
 
@@ -56,23 +53,67 @@ let rec reduce_all eq = function
   | [] -> []
   | x::lst -> if x == eq
               then
-                match x with
+                (match x with
                   | EqT(t1, t2) -> let rec red e1 e2 = match e1 with
                     | SimpleT st -> EqT(e1,e2)::lst
-                    | ComplexT (ct1, ct2) -> red ct1 ct2
-              else x::reduce_all eq lst
+                    | ComplexT (ct1, ct2) -> red ct1 ct2)
+              else x::(reduce_all eq lst)
   ;;
 
-let rec substitute var expr = function
-  | [] -> []
-  | x::lst -> match x with | EqT (l, r) ->
-    let search_var eq = match eq with
-      | SimptleT st -> if st == var then expr else eq
-      | ComplexT (ct1, ct2) -> search_var ct1; search_var ct2
-    in EqT((search_var l), (search_var r))::substitute var expr lst
+let step1 system =
+  let rec next_eq lst n_system = match lst with
+    | x::tl -> (match x with
+      | EqT (l, r) -> match l with
+        | ComplexT (lft, rght) -> match r with
+          | SimpleT typ1 -> (next_eq tl EqT(typ1, l)::n_system)
+          | _ -> (next_eq tl x::n_system)
+        | _ -> (next_eq tl x::n_system)
+      )
+    | [] -> n_system (* not sure *)
+    in next_eq system []
+    ;;
+
+let step2 system =
+  let rec next_eq lst n_system = match lst with
+    | x::tl -> (match x with
+      | EqT (l, r) -> match l,r with
+        | SimpleT t1, Simple t2 -> if t1 = t2 then (next_eq tl n_system)
+        | _ -> (next_eq tl x::n_system)
+      | _ -> (next_eq tl x::n_system) (* not sure *)
+      )
+    | [] -> n_system (* not sure *)
+    in next_eq system []
+    ;;
+
+let step3 =
+
+let vars_to_change = Hashtbl.create 1000;;
+let substitute system =
+  let rec subs = function
+    | [] -> []
+    | x::lst -> match x with
+      | EqT (l, r) ->
+        let rec search_var eq = match eq with
+          | SimptleT st -> if Hashtbl.mem vars_to_change st then Hashtbl.find vars_to_change st else eq
+          | ComplexT (ct1, ct2) -> ComplexT(search_var ct1, search_var ct2)
+        in EqT((search_var l), (search_var r))::(subs var expr lst)
+  in subs system
   ;;
 
-let rec solve_system system =
+let step4 system =
+  let rec next_eq lst n_system i = match lst with
+    | x::tl -> (match x with
+      | EqT (l, r) -> match l with
+        | SimpleT t -> match r with
+          | ComplexT (lft, rght) -> Hashtbl.add vars_to_change l r
+          | _ -> (next_eq tl x::n_system)
+        | _ -> (next_eq tl x::n_system)
+      )
+    | [] -> n_system (* not sure *)
+    in substitute (next_eq system [] 0)
+    ;;
+
+(* let rec solve_system system =
 (*  TODO: check system *)
   let rec next_eq = match system with
     | x::lst -> match x with
@@ -85,7 +126,7 @@ let rec solve_system system =
           | ComplexT (t1, t2) -> change_all
       solve_system lst
     | _ ->
-    in solve_system equations;;
+    in solve_system equations;; *)
 
 let string_of_tree tree =
   let buf = create 1000 in
