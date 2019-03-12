@@ -12,8 +12,6 @@ type type_eq = EqT of type_of_type * type_of_type;;
 let unique_type = Stream.from (fun i -> Some (i));;
 let next_type() = (Stream.next unique_type);;
 
-let rec put_tab tb str = if tb == 0 then str else put_tab (tb - 1) (str ^ "*   ");;
-
 let rec checkPT pt =
   match pt with
   | SimpleT t -> (string_of_int t);
@@ -23,7 +21,9 @@ let checkEq (EqT(l, r)) = fprintf oc "%s = %s\n" (checkPT l) (checkPT r);;
 let checkSys sys = List.iter checkEq sys;; (* REMOVE *)
 
 (* TODO: remove hmaps as params *)
-let rec build_system expr tb hmap_free hmap_bond = match expr with
+let hmap_free = Hashtbl.create 1703;;
+let hmap_bond = Hashtbl.create 1703;;
+let rec build_system expr = match expr with
   | Var v ->
     let n_t = (
     (* fprintf oc "flag 1\n"; *)
@@ -34,22 +34,21 @@ let rec build_system expr tb hmap_free hmap_bond = match expr with
         then Hashtbl.find hmap_free v
         else (let nn_t = next_type() in Hashtbl.add hmap_free v nn_t; nn_t)
       )
-             in ([], SimpleT(n_t), (tb + 1))
+             in ([], SimpleT(n_t))
   | Appl (l, r) -> (
     (* fprintf oc "flag 2\n"; *)
-    let (s1, t1, tb1) = build_system l (tb + 1) hmap_free hmap_bond in
-      let (s2, t2, tb2) = build_system r (tb + 1) hmap_free hmap_bond in
-        (* (((EqT(t1, ComplexT(t2, SimpleT(tb2 + 1))))::(s1 @ s2)), SimpleT(tb2 + 1), (tb2 + 1)); *)
+    let (s1, t1) = build_system l in
+      let (s2, t2) = build_system r in
         let n_t1 = next_type() in
-          (((EqT(t1, ComplexT(t2, SimpleT(n_t1))))::(s1 @ s2)), SimpleT(n_t1), (tb2 + 1));
+          (((EqT(t1, ComplexT(t2, SimpleT(n_t1))))::(s1 @ s2)), SimpleT(n_t1));
     )
   | Abstr (v, r) -> (
     (* fprintf oc "flag 3\n"; *)
     let n_t = next_type() in
     Hashtbl.add hmap_bond v n_t;
-    let (s1, t1, tb1) = build_system r (tb + 1) hmap_free hmap_bond in
+    let (s1, t1) = build_system r in
       Hashtbl.remove hmap_bond v;
-      (s1, ComplexT(SimpleT(n_t), t1), tb1)
+      (s1, ComplexT(SimpleT(n_t), t1))
     )
   ;;
 
@@ -97,7 +96,6 @@ let step3 system =
     in next_eq system []
     ;;
 
-(* let vars_to_change = Hashtbl.create 1000;; *)
 let substitute (sl, sr) system inner_iter =
   (* fprintf oc "---- Substitution: "; checkEq (EqT(sl,sr)); fprintf oc "---- into: \n"; checkSys system; *)
   let rec subs n_system = function
@@ -211,31 +209,94 @@ let rec solve_system system =
       )
   ;;
 
+let derived_types = Hashtbl.create 1703
+let rec create_types_map system = match system with
+  | [] -> ()
+  | x::tl -> match x with
+    | EqT (l, r) -> Hashtbl.add derived_types l r
+  ;;
+
+let put_tab tab =
+  let rec p_t tb str =
+    if tb == 0 then str else p_t (tb - 1) (str ^ "*   ")
+  in p_t tab ""
+  ;;
+
+let r_unique_type = Stream.from (fun i -> Some (i));;
+let r_next_type() = (Stream.next r_unique_type);;
+
+let correct_type tp =
+  if Hashtbl.mem derived_types tp
+  then Hashtbl.find derived_types tp
+  else tp
+  ;;
+
 let string_of_tree tree =
   let buf = Buffer.create 1000 in
   let rec s_t t = match t with
     | Var v -> add_string buf v
-    | Appl (l, r) ->
-      add_string buf "("; s_t l; add_string buf " "; s_t r; add_string buf ")"
-    | Abstr (v, r) ->
-      add_string buf "(\\"; add_string buf v; add_string buf "."; s_t r; add_string buf ")"
+    | Appl (l,r) -> add_string buf "("; s_t l; add_string buf " "; s_t r; add_string buf ")"
+    | Abstr (v,r) -> add_string buf "(\\"; add_string buf v; add_string buf "."; s_t r; add_string buf ")"
   in s_t tree;
   contents buf;;
 
-let lines =
-let init = Buffer.create 100000 in
-  let rec f () =
-  try
-    let s = input_line stdin in
-      (add_string init s; add_string init " "; f (); ())
-  with e -> () in
-    (f (); contents init);;
+let string_of_type type1 =
+  let rec s_t t = match (correct_type t) with
+  | SimpleT st -> string_of_int st (* correct type *)
+  | ComplexT (l, r) -> "(" ^ s_t l ^ "->" ^ s_t r ^ ")"
+  in s_t type1
+  ;;
+
+let make_proof input =
+  let rec m_p expr tb =
+    match expr with
+    | Var v ->
+      let n_t = (
+        if Hashtbl.mem hmap_bond v
+        then Hashtbl.find hmap_bond v
+        else
+          if Hashtbl.mem hmap_free v
+          then Hashtbl.find hmap_free v
+          else (let nn_t = r_next_type() in Hashtbl.add hmap_free v nn_t; nn_t)
+        )
+       in
+         (* tab context : type |- expression : type *)
+         printf "%s%s : %s " (put_tab tb) v (string_of_int n_t);
+         printf "|- %s : %s " v (string_of_int n_t);
+         printf "[rule #1]\n";
+        ([], SimpleT(n_t))
+    | Appl (l, r) -> (
+      let (s1, t1) = m_p l (tb + 1) in (* may be should change order *)
+        let (s2, t2) = m_p r (tb + 1) in
+          let n_t1 = r_next_type() in
+            (* tab |- expression : type *)
+            printf "%s" (put_tab tb);
+            printf "|- %s : %s " (string_of_tree expr) (string_of_type (SimpleT(n_t1)));
+            printf "[rule #2]\n";
+            (((EqT(t1, ComplexT(t2, SimpleT(n_t1))))::(s1 @ s2)), SimpleT(n_t1));
+      )
+    | Abstr (v, r) -> (
+      let n_t = r_next_type() in
+      Hashtbl.add hmap_bond v n_t;
+      let (s1, t1) = m_p r (tb + 1) in
+        Hashtbl.remove hmap_bond v;
+        (* tab |- expression : type *)
+        printf "%s " (put_tab tb);
+        printf "|- %s : %s " (string_of_tree expr) (string_of_type (ComplexT(SimpleT(n_t), t1)));
+        printf "[rule #3]\n";
+        (s1, ComplexT(SimpleT(n_t), t1))
+      )
+    in m_p input 0
+  ;;
 
 let inp = ic >> input_line >> Lexing.from_string >> Parser.main Lexer.main;;
 
-let (a, b, c) = build_system inp 0 (Hashtbl.create 100) (Hashtbl.create 100);;
-(* checkSys a; *)
+let (a, b) = build_system inp;;
+
 let solver =
   try
-    checkSys (solve_system a);
+    (let final_system = solve_system a in
+      checkSys final_system;
+      create_types_map final_system;
+      let (_, _) = make_proof inp in ())
   with SystemHasNoType -> fprintf oc "❌❌❌Expression has no type❌❌❌\n";;
