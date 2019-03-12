@@ -8,51 +8,74 @@ let (>>) x f = f x;;
 type type_of_type = SimpleT of int | ComplexT of type_of_type * type_of_type;;
 type type_eq = EqT of type_of_type * type_of_type;;
 
-(* module TypesMap = Map.Make(type_of_type);;
-module TabsMap = Map.Make(type_of_type);;
+(* module Hashtbl = Map.Make(Tree);; *)
+(*module TabsMap = Map.Make(type_of_type);;
 let equations = [];;
 let types = [];;
 let tabs = [];;*)
-let types_map = TypesMap.empty;;
+(* let types_map = Hashtbl.empty;; *)
+(* let types_map = Hashtbl.create 1000;; *)
 
-let unique_type = Stream.from (fun i -> Some ("t" ^ string_of_int i));;
-let next_type = (Stream.next unique_type);;
+let unique_type = Stream.from (fun i -> Some (i));;
+let next_type() = (Stream.next unique_type);;
 
-let rec put_tab tb str = if tb == 0 then str else put_tab (tb - 1) (str + "*   ");;
+let rec put_tab tb str = if tb == 0 then str else put_tab (tb - 1) (str ^ "*   ");;
 
-(* TODO: not sure about adding equations *)
-let rec build_system expr tb = match expr with
-  | Var v -> let n_t = (if TypeMap.mem v types_map
-                        then TypeMap.key v types_map
-                        else next_type)
-             in TypesMap.add Var(v) n_t types_map;
-             n_t;
-  | Appl (l, r) -> let t_l =
-                      build_system l (tb + 1) and t_r = build_system r (tb + 1)
-                   in let n_t = next_type in
-                   (*equations.append SimpleT(t_l); equations.append SimpleT(t_r);*)
-                   equations.append EqT(t_l, ComplexT(t_r, n_t)); TypesMap.add Appl(l, r) n_t types_map;
-                   n_t;
-  | Abstr (v, r) -> let t_v = (
-                      if TypeMap.mem v types_map
-                      then TypeMap.key v types_map
-                      else next_type) and t_r = build_system r (tb + 1)
-                    in (*equations.append SimpleT(t_r);*)
-                    TypesMap.add Abstr(v,r) ComplexT(TypesMap.key v types_map, t_r) types_map;
-                    ComplexT(TypesMap.key v types_map, t_r);;
+(* let rec print_list lst = match lst with
+  | [] -> ()
+  | x::tl -> printf "%s " x; print_list lst
+  ;; *)
+let rec checkPT pt =
+  match pt with
+  | SimpleT t -> (string_of_int t);
+  | ComplexT (f, t) -> "(" ^ (checkPT f) ^ "->" ^ (checkPT t) ^ ")";
+;;
+let checkEq (EqT(l, r)) = printf "%s=%s\n" (checkPT l) (checkPT r);;
+let checkSys sys = List.iter checkEq sys;; (* REMOVE *)
 
-let new_equations = [];;
-let eq_types_map = TypesMap.empty;;
+(* TODO: remove hmaps as params *)
+let rec build_system expr tb hmap_free hmap_bond = match expr with
+  | Var v ->
+    let n_t = (
+    (* printf "flag 1\n"; *)
+      if Hashtbl.mem hmap_bond v
+      then Hashtbl.find hmap_bond v
+      else
+        if Hashtbl.mem hmap_free v
+        then Hashtbl.find hmap_free v
+        else (let nn_t = next_type() in Hashtbl.add hmap_free v nn_t; nn_t)
+      )
+             in ([], SimpleT(n_t), (tb + 1))
+  | Appl (l, r) -> (
+    (* printf "flag 2\n"; *)
+    let (s1, t1, tb1) = build_system l (tb + 1) hmap_free hmap_bond in
+      let (s2, t2, tb2) = build_system r (tb + 1) hmap_free hmap_bond in
+        (* (((EqT(t1, ComplexT(t2, SimpleT(tb2 + 1))))::(s1 @ s2)), SimpleT(tb2 + 1), (tb2 + 1)); *)
+        let n_t1 = next_type() in
+          (((EqT(t1, ComplexT(t2, SimpleT(n_t1))))::(s1 @ s2)), SimpleT(n_t1), (tb2 + 1));
+    )
+  | Abstr (v, r) -> (
+    (* printf "flag 3\n"; *)
+    let n_t = next_type() in
+    Hashtbl.add hmap_bond v n_t;
+    let (s1, t1, tb1) = build_system r (tb + 1) hmap_free hmap_bond in
+      Hashtbl.remove hmap_bond v;
+      (s1, ComplexT(SimpleT(n_t), t1), tb1)
+    )
+  ;;
+
+
+let eq_types_map = Hashtbl.create 1000;;
 
 let rec remove_el n = function
   | [] -> []
   | x::lst -> if n = 0 then lst else x::remove_el (n - 1) lst
   ;;
 
-let reverse_eq eq = match eq with | EqT(t1, t2) -> EqT(t2, t1);;
+let rec reverse_eq eq = match eq with | EqT(t1, t2) -> EqT(t2, t1);;
 let rec rewrite_el eq = function
   | [] -> []
-  | x::lst -> if x == eq then (reverse_eq eq)::lst else x::rewrite eq lst
+  | x::lst -> if x == eq then (reverse_eq eq)::lst else x::(rewrite_el eq lst)
   ;;
 
 let rec reduce_all eq = function
@@ -75,9 +98,9 @@ let step1 system =
     | x::tl -> (match x with
       | EqT (l, r) -> match l with
         | ComplexT (lft, rght) -> match r with
-          | SimpleT typ1 -> (next_eq tl EqT(typ1, l)::n_system)
-          | _ -> (next_eq tl x::n_system)
-        | _ -> (next_eq tl x::n_system)
+          | SimpleT typ1 -> (next_eq tl (EqT(r, l)::n_system))
+          | _ -> next_eq tl (x::n_system)
+        | _ -> next_eq tl (x::n_system)
       )
     | [] -> n_system (* not sure *)
     in next_eq system []
@@ -87,9 +110,8 @@ let step2 system =
   let rec next_eq lst n_system = match lst with
     | x::tl -> (match x with
       | EqT (l, r) -> match l,r with
-        | SimpleT t1, Simple t2 -> if t1 = t2 then (next_eq tl n_system)
-        | _ -> (next_eq tl x::n_system)
-      | _ -> (next_eq tl x::n_system) (* not sure *)
+        | SimpleT t1, SimpleT t2 -> if t1 = t2 then next_eq tl n_system else next_eq tl (x::n_system)
+        | _ -> next_eq tl (x::n_system)
       )
     | [] -> n_system (* not sure *)
     in next_eq system []
@@ -99,12 +121,11 @@ let step3 system =
   let rec next_eq lst n_system = match lst with
     | x::tl -> (match x with
       | EqT (l, r) -> match l with
-        | SimpleT t -> (next_eq tl x::n_system)
+        | SimpleT t -> next_eq tl (x::n_system)
         | ComplexT (t1, t2) -> (match r with
-          | SimpleT st -> (next_eq tl x::n_system)
-          | ComplexT (ct1, ct2) -> next_eq tl Eq(t1,ct1)::Eq(t2,ct2)::n_system
+          | SimpleT st -> next_eq tl (x::n_system)
+          | ComplexT (ct1, ct2) -> next_eq tl (EqT(t1,ct1)::EqT(t2,ct2)::n_system)
           )
-      | _ -> (next_eq tl x::n_system) (* not sure *)
       )
     | [] -> n_system (* not sure *)
     in next_eq system []
@@ -112,29 +133,29 @@ let step3 system =
 
 let vars_to_change = Hashtbl.create 1000;;
 let substitute system =
-  let rec subs = function
-    | [] -> []
+  let rec subs n_system = function
+    | [] -> n_system
     | x::lst -> match x with
       | EqT (l, r) ->
         let rec search_var eq = match eq with
-          | SimptleT st -> if Hashtbl.mem vars_to_change st then Hashtbl.find vars_to_change st else eq
+          | SimpleT st -> if Hashtbl.mem vars_to_change eq then Hashtbl.find vars_to_change eq else eq
           | ComplexT (ct1, ct2) -> ComplexT(search_var ct1, search_var ct2)
-        in EqT((search_var l), (search_var r))::(subs var expr lst)
-  in subs system
+        in (EqT((search_var l), (search_var r))) :: (subs var expr lst) :: n_system
+  in subs [] system
   ;;
 
 let step4 system =
-  let rec next_eq lst n_system i = match lst with
+  let rec next_eq lst = match lst with
     | x::tl -> (match x with
       | EqT (l, r) -> match l with
         | SimpleT t -> match r with
           | ComplexT (lft, rght) -> Hashtbl.add vars_to_change l r
-          | _ -> (next_eq tl x::n_system)
-        | _ -> (next_eq tl x::n_system)
+          | _ -> next_eq tl
+        | _ -> next_eq tl
       )
-    | [] -> n_system (* not sure *)
-    in substitute (next_eq system [] 0)
-    ;;
+    | [] -> ()
+  in substitute (next_eq system)
+  ;;
 
 (* let rec solve_system system =
 (*  TODO: check system *)
@@ -152,7 +173,7 @@ let step4 system =
     in solve_system equations;; *)
 
 let string_of_tree tree =
-  let buf = create 1000 in
+  let buf = Buffer.create 1000 in
   let rec s_t t = match t with
     | Var v -> add_string buf v
     | Appl (l, r) -> add_string buf "("; s_t l; add_string buf " "; s_t r; add_string buf ")"
@@ -161,7 +182,7 @@ let string_of_tree tree =
   contents buf;;
 
 let lines =
-let init = create 100000 in
+let init = Buffer.create 100000 in
   let rec f () =
   try
     let s = input_line stdin in
@@ -169,4 +190,7 @@ let init = create 100000 in
   with e -> () in
     (f (); contents init);;
 
-lines >>  Lexing.from_string >> Parser.main Lexer.main >> string_of_tree >> printf "%s\n";;
+let inp = lines >>  Lexing.from_string >> Parser.main Lexer.main;;
+
+let (a, b, c) = build_system inp 0 (Hashtbl.create 100) (Hashtbl.create 100);;
+checkSys a;

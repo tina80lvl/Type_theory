@@ -9,6 +9,8 @@ else
 	DEL=rm -f
 endif
 
+check : clean all run
+
 all: main.exe
 
 run: main.exe
