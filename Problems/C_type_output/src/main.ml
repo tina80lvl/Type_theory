@@ -4,7 +4,7 @@ open Printf;;
 open Hashtbl;;
 
 let (>>) x f = f x;;
-let (ic,oc) = (open_in "input.txt", open_out "output.txt");;
+(* let (ic,oc) = (open_in "input.txt", open_out "output.txt");; *)
 
 type type_of_type = SimpleT of int | ComplexT of type_of_type * type_of_type;;
 type type_eq = EqT of type_of_type * type_of_type;;
@@ -17,8 +17,9 @@ let rec checkPT pt =
   | SimpleT t -> (string_of_int t);
   | ComplexT (f, t) -> "(" ^ (checkPT f) ^ "->" ^ (checkPT t) ^ ")";
 ;;
-let checkEq (EqT(l, r)) = fprintf oc "%s = %s\n" (checkPT l) (checkPT r);;
-let checkSys sys = List.iter checkEq sys;; (* REMOVE *)
+
+(* let print_eq (EqT(l, r)) = fprintf oc "%s = %s\n" (checkPT l) (checkPT r);;
+let print_system sys = List.iter print_eq sys;; *)
 
 (* TODO: remove hmaps as params *)
 let hmap_free = Hashtbl.create 1703;;
@@ -58,7 +59,7 @@ let step1 system =
     | [] -> n_system (* not sure *)
     | x::tl -> (match x with
       | EqT (l, r) -> (
-        (* checkEq x; *)
+        (* print_eq x; *)
         match l with
         | ComplexT (lft, rght) -> (match r with
           | SimpleT typ1 -> (next_eq tl (EqT(r, l)::n_system))
@@ -97,12 +98,12 @@ let step3 system =
     ;;
 
 let substitute (sl, sr) system inner_iter =
-  (* fprintf oc "---- Substitution: "; checkEq (EqT(sl,sr)); fprintf oc "---- into: \n"; checkSys system; *)
+  (* fprintf oc "---- Substitution: "; print_eq (EqT(sl,sr)); fprintf oc "---- into: \n"; print_system system; *)
   let rec subs n_system = function
     | [] -> n_system
     | x::lst -> match x with
       | EqT (l, r) -> (
-        (* fprintf oc "------ Equation: "; checkEq (x); *)
+        (* fprintf oc "------ Equation: "; print_eq (x); *)
         if List.length n_system = (inner_iter)
         then (
           (* fprintf oc "true\n"; *)
@@ -135,14 +136,14 @@ let substitute (sl, sr) system inner_iter =
 
 let step4 system =
   (* fprintf oc "⚡️⚡️⚡️Step 4:\n"; *)
-  (* fprintf oc "♎️ System in st4:\n"; checkSys system; *)
+  (* fprintf oc "♎️ System in st4:\n"; print_system system; *)
   let rec next_eq lst it =
     if it = List.length lst
     then lst
     else
       let x = (List.nth lst it)
       in
-        (* fprintf oc "-- Next eq: "; checkEq x; *)
+        (* fprintf oc "-- Next eq: "; print_eq x; *)
         match x with
         | EqT (l, r) -> (match l with
           | SimpleT t ->
@@ -183,13 +184,13 @@ let rec is_final system = match system with
      | _ -> false) && is_final tl
   ;;
 
-exception Interrupt;;
-let tio = ref 0;;
+(* exception Interrupt;;
+let tio = ref 0;; *)
 let rec solve_system system =
-  (* checkSys system; *)
-  fprintf oc "\n🌍🌍🌍Solving...\n";
-  tio := !tio + 1;
-  if (!tio > 200) then raise Interrupt else
+  (* print_system system; *)
+  (* fprintf oc "\n🌍🌍🌍Solving...\n"; *)
+  (* tio := !tio + 1;
+  if (!tio > 200) then raise Interrupt else *)
   if no_type system
   then raise SystemHasNoType
   else
@@ -198,13 +199,13 @@ let rec solve_system system =
     else
     (
       let s1 = step1 system in
-      fprintf oc "🍒s1: \n"; checkSys s1;
+      (* fprintf oc "🍒s1: \n"; print_system s1; *)
       let s2 = step2 s1 in
-      fprintf oc "🍒s2: \n"; checkSys s2;
+      (* fprintf oc "🍒s2: \n"; print_system s2; *)
       let s3 = step3 s2 in
-      fprintf oc "🍒s3: \n"; checkSys s3;
+      (* fprintf oc "🍒s3: \n"; print_system s3; *)
       let s4 = step4 s3 in
-      fprintf oc "🍒s4: \n"; checkSys s4; fprintf oc "----------------\n";
+      (* fprintf oc "🍒s4: \n"; print_system s4; fprintf oc "----------------\n"; *)
       solve_system s4
       )
   ;;
@@ -215,7 +216,8 @@ let rec create_types_map system = match system with
   | x::tl -> match x with
     | EqT (l, r) -> (
       Hashtbl.add derived_types l r; create_types_map tl;
-      fprintf oc "added: "; checkEq x)
+      (* fprintf oc "added: "; print_eq x *)
+      )
   ;;
 
 let put_tab tab =
@@ -243,21 +245,28 @@ let string_of_tree tree =
   contents buf;;
 
 let string_of_type tp =
-  fprintf oc "👀\n";
+  (* fprintf oc "👀\n"; *)
   let rec s_t t =
     let l_t = correct_type t in
       match l_t with
       | SimpleT st -> (
-        fprintf oc "simple (%d)\n" st;
-        string_of_int st)
+        (* fprintf oc "simple (%d)\n" st; *)
+        "t" ^ (string_of_int (st)))
       | ComplexT (l, r) -> (
-        fprintf oc "complex\n" ;
+        (* fprintf oc "complex\n" ; *)
         "(" ^ s_t l ^ "->" ^ s_t r ^ ")")
   in s_t tp
   ;;
 
+let answer = ref [];;
+let to_answer str = answer := str::(!answer);;
+let rec print_answer lst = match lst with
+  | [] -> ()
+  | x::tl -> (printf "%s" x; print_answer tl)
+  ;;
+
 let make_proof input =
-  let buf = Buffer.create 100500 in
+  (* let buf = Buffer.create 100500 in *)
   let rec m_p expr tb =
     match expr with
     | Var v ->
@@ -271,20 +280,24 @@ let make_proof input =
         )
        in
          (* tab context : type |- expression : type *)
-         add_string buf (put_tab tb); add_string buf v;
+         let loc_s = (put_tab tb) ^ v ^ " : " ^ (string_of_type (SimpleT(n_t))) ^ " |- " ^ v ^ " : " ^ (string_of_type (SimpleT(n_t))) ^ " [rule #1]\n"
+         in to_answer loc_s;
+         (* add_string buf (put_tab tb); add_string buf v;
          add_string buf " : "; add_string buf (string_of_type (SimpleT(n_t)));
          add_string buf " |- "; add_string buf v; add_string buf " : ";
-         add_string buf (string_of_type (SimpleT(n_t))); add_string buf " [rule #1]\n";
+         add_string buf (string_of_type (SimpleT(n_t))); add_string buf " [rule #1]\n"; *)
         (SimpleT(n_t))
     | Appl (l, r) -> (
-      let (t1) = m_p l (tb + 1) in (* may be should change order *)
-        let (t2) = m_p r (tb + 1) in
+      let (_) = m_p l (tb + 1) in (* may be should change order *)
+        let (_) = m_p r (tb + 1) in
           let n_t1 = r_next_type() in
             (* tab |- expression : type *)
-            add_string buf (put_tab tb);
+            let loc_s = (put_tab tb) ^ "|- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (SimpleT(n_t1))) ^ " [rule #2]\n"
+            in to_answer loc_s;
+            (* add_string buf (put_tab tb);
             add_string buf "|- "; add_string buf (string_of_tree expr);
             add_string buf " : "; add_string buf (string_of_type (SimpleT(n_t1)));
-            add_string buf " [rule #2]\n";
+            add_string buf " [rule #2]\n"; *)
             (SimpleT(n_t1));
       )
     | Abstr (v, r) -> (
@@ -293,24 +306,26 @@ let make_proof input =
       let (t1) = m_p r (tb + 1) in
         Hashtbl.remove hmap_bond v;
         (* tab |- expression : type *)
-        add_string buf (put_tab tb);
+        let loc_s = (put_tab tb) ^ "|- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (ComplexT(SimpleT(n_t), t1))) ^ " [rule #3]\n"
+        in to_answer loc_s;
+        (* add_string buf (put_tab tb);
         add_string buf "|- "; add_string buf (string_of_tree expr);
         add_string buf " : "; add_string buf (string_of_type (ComplexT(SimpleT(n_t), t1)));
-        add_string buf " [rule #3]\n";
+        add_string buf " [rule #3]\n"; *)
         (ComplexT(SimpleT(n_t), t1))
       )
-    in m_p input 0;
-    contents buf
+    in m_p input 0
+    (* contents buf *)
     ;;
 
-let inp = ic >> input_line >> Lexing.from_string >> Parser.main Lexer.main;;
+let inp = input_line stdin >> Lexing.from_string >> Parser.main Lexer.main;;
 
 let (a, b) = build_system inp;;
 
 let solver =
   try
     (let final_system = solve_system a in
-      checkSys final_system;
+      (* print_system final_system; *)
       create_types_map final_system;
-      let (_) = printf "%s\n" (make_proof inp) in ())
-  with SystemHasNoType -> fprintf oc "❌❌❌Expression has no type❌❌❌\n";;
+      let (_) = make_proof inp in print_answer !answer)
+  with SystemHasNoType -> printf "Expression has no type\n";;
