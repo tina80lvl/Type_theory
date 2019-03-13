@@ -1,62 +1,36 @@
-
-🌍🌍🌍Solving...
-🍒s1: 
-(0->0) = ((1->1)->2)
-🍒s2: 
-(0->0) = ((1->1)->2)
-🍒s3: 
-0 = (1->1)
-0 = 2
-🍒s4: 
-0 = (1->1)
-(1->1) = 2
-----------------
-
-🌍🌍🌍Solving...
-🍒s1: 
-2 = (1->1)
-0 = (1->1)
-🍒s2: 
-0 = (1->1)
-2 = (1->1)
-🍒s3: 
-2 = (1->1)
-0 = (1->1)
-🍒s4: 
-2 = (1->1)
-0 = (1->1)
-----------------
-
-🌍🌍🌍Solving...
-2 = (1->1)
-0 = (1->1)
-added: 0 = (1->1)
-added: 2 = (1->1)
+iter step: a' 1
 👀
-complex
 simple (1)
-simple (1)
+iter step: z8' 3
 👀
-complex
-simple (1)
-simple (1)
+simple (3)
 👀
 complex
 complex
-simple (1)
-simple (1)
-complex
-simple (1)
-simple (1)
-👀
-simple (1)
-👀
-simple (1)
+simple (4)
+simple (3)
+simple (0)
 👀
 complex
-simple (1)
-simple (1)
+complex
+simple (4)
+simple (3)
+simple (0)
+👀
+simple (0)
+👀
+simple (0)
 👀
 complex
-simple (1)
-simple (1)
+simple (4)
+simple (3)
+👀
+simple (3)
+👀
+simple (3)
+👀
+simple (4)
+👀
+complex
+simple (4)
+simple (0)
