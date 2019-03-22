@@ -1,36 +1,32 @@
-iter step: a' 1
-👀
-simple (1)
-iter step: z8' 3
-👀
-simple (3)
-👀
-complex
-complex
-simple (4)
-simple (3)
-simple (0)
-👀
-complex
-complex
-simple (4)
-simple (3)
-simple (0)
-👀
-simple (0)
-👀
-simple (0)
-👀
-complex
-simple (4)
-simple (3)
-👀
-simple (3)
-👀
-simple (3)
-👀
-simple (4)
-👀
-complex
-simple (4)
-simple (0)
+
+global
+2 = (0->(1->4))
+3 = (1->4)
+context: 
+GLOBAL: iter step: a' 2
+GLOBAL: iter step: z8' 1
+After gc context: a' : (t1 -> (t2 -> t5)), z8' : t2
+
+m_p of { (\a.((a' a) z8')) }
+
+m_p of { ((a' a) z8') }
+
+m_p of { z8' }
+adding to free
+LOCAL: iter step: z8' 1
+🥶 context in var z8': a' : (t1 -> (t2 -> t5)), z8' : t2
+
+m_p of { (a' a) }
+k: z8'; v: 1
+
+m_p of { a }
+k: z8'; v: 1
+LOCAL: iter step: z8' 1
+🥶 context in var a: a' : (t1 -> (t2 -> t5)), z8' : t2
+
+m_p of { a' }
+k: z8'; v: 1
+adding to free
+LOCAL: iter step: a' 2
+LOCAL: iter step: z8' 1
+🥶 context in var a': a' : (t1 -> (t2 -> t5)), z8' : t2
