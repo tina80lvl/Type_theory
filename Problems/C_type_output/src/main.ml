@@ -4,7 +4,7 @@ open Printf;;
 open Hashtbl;;
 
 let (>>) x f = f x;;
-let (ic,oc) = (open_in "input.txt", open_out "output.txt");;
+(* let (ic,oc) = (open_in "input.txt", open_out "output.txt");; *)
 
 type type_of_type = SimpleT of int | ComplexT of type_of_type * type_of_type;;
 type type_eq = EqT of type_of_type * type_of_type;;
@@ -18,9 +18,9 @@ let rec checkPT pt =
   | ComplexT (f, t) -> "(" ^ (checkPT f) ^ "->" ^ (checkPT t) ^ ")";
 ;;
 
-let print_eq (EqT(l, r)) = fprintf oc "%s = %s\n" (checkPT l) (checkPT r);;
+(* let print_eq (EqT(l, r)) = fprintf oc "%s = %s\n" (checkPT l) (checkPT r);;
 let print_system sys = List.iter print_eq sys;;
-let print_htable = Hashtbl.iter (fun k v -> fprintf oc "k: %s; v: %d\n" k v);;
+let print_htable = Hashtbl.iter (fun k v -> fprintf oc "k: %s; v: %d\n" k v);; *)
 
 let hmap_free = Hashtbl.create 1703;;
 let hmap_bond = Hashtbl.create 1703;;
@@ -271,7 +271,7 @@ let added_to_context = Hashtbl.create 1703;;
 let put_context = context := "";
   Hashtbl.iter (
     fun k v -> (
-    fprintf oc "LOCAL: iter step: %s %d\n" k v;
+    (* fprintf oc "LOCAL: iter step: %s %d\n" k v; *)
     if !context = ""
     then (
       if (not (Hashtbl.mem added_to_context k))
@@ -292,10 +292,11 @@ let put_context = context := "";
     )
   )
   ;;
-let put_gcontext = fprintf oc "\nglobal\n";
+let put_gcontext =
+(* fprintf oc "\nglobal\n"; *)
   Hashtbl.iter (
     fun k v -> (
-    fprintf oc "GLOBAL: iter step: %s %d\n" k v;
+    (* fprintf oc "GLOBAL: iter step: %s %d\n" k v; *)
     if !context = ""
     then (
       if (not (Hashtbl.mem added_to_context k))
@@ -316,9 +317,9 @@ let put_gcontext = fprintf oc "\nglobal\n";
   ;;
 
 let make_proof input =
-  let rec m_p expr tb =
-    fprintf oc "\nm_p of { %s }\n" (string_of_tree expr);
-    print_htable hmap_free;
+  let rec m_p expr tb cntx =
+    (* fprintf oc "\nm_p of { %s }\n" (string_of_tree expr); *)
+    (* print_htable hmap_free; *)
     (* put_context hmap_free; *)
     (* fprintf oc "🥶m_p context: %s\n" !context; *)
     match expr with
@@ -330,47 +331,50 @@ let make_proof input =
           if Hashtbl.mem hmap_free v
           then Hashtbl.find hmap_free v
           else (
-            fprintf oc "adding to free\n";
+            (* fprintf oc "adding to free\n"; *)
             let nn_t = r_next_type() in Hashtbl.add hmap_free v nn_t; nn_t)
         )
        in
          (* tab context : type |- expression : type *)
          let loc_s =
-          put_context hmap_free; fprintf oc "🥶 context in var %s: %s\n" v !context;
-          if !context = ""
-          then (put_tab tb) ^ v ^ " : " ^ (string_of_type (SimpleT(n_t))) ^ " |- " ^ v ^ " : " ^ (string_of_type (SimpleT(n_t))) ^ " [rule #1]\n"
-          else (put_tab tb) ^ !context ^ ", " ^ v ^ " : " ^ (string_of_type (SimpleT(n_t))) ^ " |- " ^ v ^ " : " ^ (string_of_type (SimpleT(n_t))) ^ " [rule #1]\n"
+          (* put_context hmap_free; fprintf oc "🥶 context in var %s: %s\n" v !context; *)
+          if cntx = ""
+          then (put_tab tb) ^ cntx ^ "|- " ^ v ^ " : " ^ (string_of_type (SimpleT(n_t))) ^ " [rule #1]\n"
+          else (put_tab tb) ^ cntx ^ " |- " ^ v ^ " : " ^ (string_of_type (SimpleT(n_t))) ^ " [rule #1]\n"
          in to_answer loc_s;
          (SimpleT(n_t))
     | Appl (l, r) -> (
-      let (_) = m_p r (tb + 1) in (* may be should change order *)
-        let (_) = m_p l (tb + 1) in
+      let (_) = m_p r (tb + 1) cntx in (* may be should change order *)
+        let (_) = m_p l (tb + 1) cntx in
           let n_t1 = r_next_type() in
             (* tab |- expression : type *)
             let loc_s =
               (* put_context hmap_free; *)
-              if !context = ""
-              then (put_tab tb) ^ "|- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (SimpleT(n_t1))) ^ " [rule #2]\n"
-              else (put_tab tb) ^ !context ^ " |- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (SimpleT(n_t1))) ^ " [rule #2]\n"
+              if cntx = ""
+              then (put_tab tb) ^ cntx ^ "|- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (SimpleT(n_t1))) ^ " [rule #2]\n"
+              else (put_tab tb) ^ cntx ^ " |- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (SimpleT(n_t1))) ^ " [rule #2]\n"
             in to_answer loc_s;
             (SimpleT(n_t1));
       )
     | Abstr (v, r) -> (
       let n_t = r_next_type() in
       Hashtbl.add hmap_bond v n_t;
-      let (t1) = m_p r (tb + 1) in
+      let (t1) = m_p r (tb + 1) ((
+          fun loc_c -> if loc_c = ""
+          then (v ^ " : " ^ (string_of_type (SimpleT(n_t))))
+          else (cntx ^ ", " ^ v ^ " : " ^ (string_of_type (SimpleT(n_t))) )) cntx) in
         Hashtbl.remove hmap_bond v;
         (* Hashtbl.add hmap_free v n_t; *)
         (* tab |- expression : type *)
         let loc_s =
           (* put_context hmap_free; *)
-          if !context = ""
-          then (put_tab tb) ^ "|- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (ComplexT(SimpleT(n_t), t1))) ^ " [rule #3]\n"
-          else (put_tab tb) ^ !context ^ " |- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (ComplexT(SimpleT(n_t), t1))) ^ " [rule #3]\n"
+          if cntx = ""
+          then (put_tab tb) ^ cntx ^ "|- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (ComplexT(SimpleT(n_t), t1))) ^ " [rule #3]\n"
+          else (put_tab tb) ^ cntx ^ " |- " ^ (string_of_tree expr) ^ " : " ^ (string_of_type (ComplexT(SimpleT(n_t), t1))) ^ " [rule #3]\n"
         in to_answer loc_s;
         (ComplexT(SimpleT(n_t), t1))
       )
-    in m_p input 0
+    in m_p input 0 !context
     ;;
 
 let inp = input_line stdin >> Lexing.from_string >> Parser.main Lexer.main;;
@@ -380,8 +384,8 @@ let (a, b) = build_system inp;;
 let solver =
   try
     (let final_system = solve_system a in
-      print_system final_system;
-      fprintf oc "context: %s\n" !context;
+      (* print_system final_system; *)
+      (* fprintf oc "context: %s\n" !context; *)
       (* let !context = put_context "" in *)
       (* Hashtbl.keys hmap_free in *)
       (* let rec !context_str str lst = match lst with
@@ -391,7 +395,8 @@ let solver =
       in !context_str "" !context; *)
       create_types_map final_system;
       put_gcontext hmap_free;
-      fprintf oc "After gc context: %s\n" !context;
+      (* fprintf oc "After gc context: %s\n" !context; *)
       Hashtbl.reset hmap_free; Hashtbl.reset hmap_bond;
-      let (_) = make_proof inp in print_answer !answer)
+      (* let (_) = make_proof inp in print_answer !answer *)
+      )
   with SystemHasNoType -> printf "Expression has no type\n";;
